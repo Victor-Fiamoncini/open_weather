@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:open_weather/config/api.dart';
+import 'package:open_weather/models/location.dart';
+import 'package:open_weather/models/weather.dart';
 
 void main() => runApp(App());
 
@@ -13,36 +15,63 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  String _location = 'Rodeio';
+  String _location;
   String _weather = 'clear';
-  int _temperature = 110;
-  int _woeid = 123123;
+  int _temperature = 0;
+  int _woeid;
 
   Future<void> fetchSearch(String input) async {
-    final response = await http.get(searchApiUrl + input);
-    final jsonResponse = json.decode(response.body)[0];
+    try {
+      final response = await http.get(searchApiUrl + input);
+      final jsonResponse = jsonDecode(response.body)[0];
 
-    setState(() {
-      _location = jsonResponse['title'] as String;
-      _woeid = jsonResponse['woeid'] as int;
-    });
+      final _locationInstance = Location.fromJson(jsonResponse);
+
+      setState(() {
+        _location = _locationInstance.title;
+        _woeid = _locationInstance.woeid;
+      });
+    } catch (e) {
+      print('Error to search location');
+    }
   }
 
   Future<void> fetchLocation() async {
-    final response = await http.get(locationApiUrl + _woeid.toString());
-    final jsonResponse = json.decode(response.body);
-    final data = jsonResponse['consolidated_weather'][0];
+    // final url = locationApiUrl + _woeid;
 
-    final formattedWeather = data['weather_state_name']
-        .toString()
-        .replaceAll(' ', '')
-        .trim()
-        .toLowerCase();
+    print(_woeid);
 
-    setState(() {
-      _temperature = data['the_temp'].round() as int;
-      _weather = formattedWeather;
-    });
+    // try {
+    // final response = await http.get(url);
+    // final jsonResponse = jsonDecode(response.body);
+    // final consolidatedWeather = jsonResponse['consolidated_weather'];
+
+    // print('CONSOOOO $consolidatedWeather');
+
+    // final data = consolidatedWeather[0];
+
+    // print('DATA $data');
+
+    // final _weatherInstance = Weather.fromJson(data);
+
+    // print('AAAAAAAAA');
+    // print('Weather $_weatherInstance');
+
+    // setState(() {
+    //   _temperature = _weatherInstance.theTemp.round();
+    //   _weather = _weatherInstance.weatherStateName
+    //       .toString()
+    //       .replaceAll(' ', '')
+    //       .toLowerCase();
+    // });
+    // } catch (e) {
+    //   print('ERRO 2 $e');
+    // }
+  }
+
+  void onTextFieldSubmitted(String input) {
+    fetchSearch(input);
+    fetchLocation();
   }
 
   @override
@@ -66,7 +95,7 @@ class _AppState extends State<App> {
                 children: [
                   Center(
                     child: Text(
-                      '$_temperature °C',
+                      _temperature != null ? '$_temperature °C' : '',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 60,
@@ -75,7 +104,7 @@ class _AppState extends State<App> {
                   ),
                   Center(
                     child: Text(
-                      _location,
+                      _location ?? '',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 60,
@@ -86,18 +115,22 @@ class _AppState extends State<App> {
               ),
               Column(
                 children: [
-                  const SizedBox(
+                  SizedBox(
                     width: 300,
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: TextField(
+                        onSubmitted: (input) {
+                          onTextFieldSubmitted('London');
+                          // onTextFieldSubmitted(input);
+                        },
                         keyboardType: TextInputType.text,
                         cursorColor: Colors.white,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
                         ),
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: 'Search another location',
                           alignLabelWithHint: true,
                           filled: false,
