@@ -3,11 +3,11 @@ class Weather {
 
   Weather.fromJson(dynamic json) {
     weatherStateName = json['weather_state_name'] as String;
-    theTemp = json['the_temp'] as int;
+    theTemp = json['the_temp'] as double;
   }
 
   String weatherStateName;
-  int theTemp;
+  double theTemp;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};

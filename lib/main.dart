@@ -16,20 +16,20 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   String _location;
-  String _weather = 'clear';
-  int _temperature = 0;
   int _woeid;
+  String _weather;
+  int _temperature;
 
   Future<void> fetchSearch(String input) async {
     try {
       final response = await http.get(searchApiUrl + input);
       final jsonResponse = jsonDecode(response.body)[0];
 
-      final _locationInstance = Location.fromJson(jsonResponse);
+      final locationInstance = Location.fromJson(jsonResponse);
 
       setState(() {
-        _location = _locationInstance.title;
-        _woeid = _locationInstance.woeid;
+        _location = locationInstance.title;
+        _woeid = locationInstance.woeid;
       });
     } catch (e) {
       print('Error to search location');
@@ -37,41 +37,35 @@ class _AppState extends State<App> {
   }
 
   Future<void> fetchLocation() async {
-    // final url = locationApiUrl + _woeid;
+    final url = locationApiUrl + _woeid.toString();
 
-    print(_woeid);
+    try {
+      final response = await http.get(url);
+      final jsonResponse = jsonDecode(response.body);
+      final consolidatedWeather = jsonResponse['consolidated_weather'];
+      final data = consolidatedWeather[0];
 
-    // try {
-    // final response = await http.get(url);
-    // final jsonResponse = jsonDecode(response.body);
-    // final consolidatedWeather = jsonResponse['consolidated_weather'];
+      final weatherInstance = Weather.fromJson(data);
 
-    // print('CONSOOOO $consolidatedWeather');
+      final formattedTemp = weatherInstance.theTemp.round();
 
-    // final data = consolidatedWeather[0];
+      final formattedWeather = weatherInstance.weatherStateName
+          .toString()
+          .replaceAll(' ', '')
+          .toLowerCase();
 
-    // print('DATA $data');
-
-    // final _weatherInstance = Weather.fromJson(data);
-
-    // print('AAAAAAAAA');
-    // print('Weather $_weatherInstance');
-
-    // setState(() {
-    //   _temperature = _weatherInstance.theTemp.round();
-    //   _weather = _weatherInstance.weatherStateName
-    //       .toString()
-    //       .replaceAll(' ', '')
-    //       .toLowerCase();
-    // });
-    // } catch (e) {
-    //   print('ERRO 2 $e');
-    // }
+      setState(() {
+        _temperature = formattedTemp;
+        _weather = formattedWeather;
+      });
+    } catch (e) {
+      print('Error to search weather');
+    }
   }
 
-  void onTextFieldSubmitted(String input) {
-    fetchSearch(input);
-    fetchLocation();
+  Future<void> onTextFieldSubmitted(String input) async {
+    await fetchSearch(input);
+    await fetchLocation();
   }
 
   @override
@@ -120,9 +114,8 @@ class _AppState extends State<App> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: TextField(
-                        onSubmitted: (input) {
-                          onTextFieldSubmitted('London');
-                          // onTextFieldSubmitted(input);
+                        onSubmitted: (input) async {
+                          await onTextFieldSubmitted(input);
                         },
                         keyboardType: TextInputType.text,
                         cursorColor: Colors.white,
