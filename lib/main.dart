@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:open_weather/config/api.dart';
-import 'package:open_weather/models/location.dart';
+import 'package:open_weather/models/location.dart' as location_dto;
 import 'package:open_weather/models/weather.dart';
 
 void main() => runApp(App());
@@ -21,31 +23,37 @@ class _AppState extends State<App> {
   String _weather = 'clear';
   int _temperature;
   String _abbrevation = 'h';
+  String _error = '';
+  Position _currentPosition;
+  String _currentAddress;
 
   @override
   void initState() {
     super.initState();
 
-    fetchLocation();
+    _fetchLocation();
   }
 
-  Future<void> fetchSearch(String input) async {
+  Future<void> _fetchSearch(String input) async {
     try {
       final response = await http.get(searchApiUrl + input);
       final jsonResponse = jsonDecode(response.body)[0];
 
-      final locationInstance = Location.fromJson(jsonResponse);
+      final locationInstance = location_dto.Location.fromJson(jsonResponse);
 
       setState(() {
         _location = locationInstance.title;
         _woeid = locationInstance.woeid;
+        _error = '';
       });
     } catch (e) {
-      print('Error to search location');
+      setState(() {
+        _error = "Sorry, we don't have data about this city. Try another one.";
+      });
     }
   }
 
-  Future<void> fetchLocation() async {
+  Future<void> _fetchLocation() async {
     final url = locationApiUrl + _woeid.toString();
 
     try {
@@ -72,9 +80,46 @@ class _AppState extends State<App> {
     }
   }
 
-  Future<void> onTextFieldSubmitted(String input) async {
-    await fetchSearch(input);
-    await fetchLocation();
+  Future<void> _onTextFieldSubmitted(String input) async {
+    await _fetchSearch(input);
+    await _fetchLocation();
+  }
+
+  Future<void> _getCurrentGeoLocation() async {
+    try {
+      final position = await Geolocator.getCurrentPosition();
+
+      setState(() {
+        _currentPosition = position;
+      });
+
+      await _getAddressFromLatLng();
+    } catch (e) {
+      print('Error to get current location $e');
+    }
+  }
+
+  Future<void> _fetchLocationDay() async {}
+
+  Future<void> _getAddressFromLatLng() async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        _currentPosition.latitude,
+        _currentPosition.longitude,
+      );
+
+      final place = placemarks[0];
+
+      setState(() {
+        _currentAddress =
+            '${place.locality}, ${place.postalCode}, ${place.country}';
+      });
+
+      await _fetchSearch(place.locality);
+      await _fetchLocation();
+    } catch (e) {
+      print('Error to get address from lat/lng');
+    }
   }
 
   @override
@@ -98,6 +143,24 @@ class _AppState extends State<App> {
               )
             : Scaffold(
                 backgroundColor: Colors.transparent,
+                appBar: AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  actions: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: () async {
+                          await _getCurrentGeoLocation();
+                        },
+                        child: const Icon(
+                          Icons.location_city,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 body: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -117,7 +180,7 @@ class _AppState extends State<App> {
                             '$_temperature °C',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 60,
+                              fontSize: 52,
                             ),
                           ),
                         ),
@@ -126,7 +189,7 @@ class _AppState extends State<App> {
                             _location ?? '',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 60,
+                              fontSize: 52,
                             ),
                           ),
                         ),
@@ -140,14 +203,14 @@ class _AppState extends State<App> {
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: TextField(
                               onSubmitted: (input) async {
-                                await onTextFieldSubmitted(input);
+                                await _onTextFieldSubmitted(input);
                               },
                               keyboardType: TextInputType.text,
                               textCapitalization: TextCapitalization.words,
                               cursorColor: Colors.white,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 24,
+                                fontSize: 20,
                               ),
                               decoration: const InputDecoration(
                                 hintText: 'Search another location',
@@ -175,6 +238,17 @@ class _AppState extends State<App> {
                                 ),
                               ),
                             ),
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 20,
+                        ),
+                        Text(
+                          _error,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 18,
                           ),
                         )
                       ],
