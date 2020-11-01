@@ -11,17 +11,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  flutter_spinkit: "^4.1.2"
   http: ^0.12.1
   cupertino_icons: ^1.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   lint: ^1.0.0
 
 flutter:
   uses-material-design: true
   assets:
-    - ./lib/assets/
+    - ./lib/assets/images/backgrounds/

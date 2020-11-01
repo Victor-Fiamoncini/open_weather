@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:open_weather/config/api.dart';
@@ -15,10 +16,18 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  String _location;
-  int _woeid;
-  String _weather;
+  String _location = 'San Fransisco';
+  int _woeid = 2487956;
+  String _weather = 'clear';
   int _temperature;
+  String _abbrevation = 'h';
+
+  @override
+  void initState() {
+    super.initState();
+
+    fetchLocation();
+  }
 
   Future<void> fetchSearch(String input) async {
     try {
@@ -42,8 +51,7 @@ class _AppState extends State<App> {
     try {
       final response = await http.get(url);
       final jsonResponse = jsonDecode(response.body);
-      final consolidatedWeather = jsonResponse['consolidated_weather'];
-      final data = consolidatedWeather[0];
+      final data = jsonResponse['consolidated_weather'][0];
 
       final weatherInstance = Weather.fromJson(data);
 
@@ -57,6 +65,7 @@ class _AppState extends State<App> {
       setState(() {
         _temperature = formattedTemp;
         _weather = formattedWeather;
+        _abbrevation = weatherInstance.weatherStateAbbr;
       });
     } catch (e) {
       print('Error to search weather');
@@ -76,86 +85,103 @@ class _AppState extends State<App> {
       home: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('lib/assets/$_weather.png'),
+            image: AssetImage('lib/assets/images/backgrounds/$_weather.png'),
             fit: BoxFit.cover,
           ),
         ),
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Column(
-                children: [
-                  Center(
-                    child: Text(
-                      _temperature != null ? '$_temperature °C' : '',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 60,
-                      ),
-                    ),
-                  ),
-                  Center(
-                    child: Text(
-                      _location ?? '',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 60,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                children: [
-                  SizedBox(
-                    width: 300,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: TextField(
-                        onSubmitted: (input) async {
-                          await onTextFieldSubmitted(input);
-                        },
-                        keyboardType: TextInputType.text,
-                        cursorColor: Colors.white,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'Search another location',
-                          alignLabelWithHint: true,
-                          filled: false,
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.white,
-                              width: 2,
+        child: _temperature == null
+            ? const Center(
+                child: SpinKitThreeBounce(
+                  color: Colors.white,
+                  size: 100,
+                ),
+              )
+            : Scaffold(
+                backgroundColor: Colors.transparent,
+                body: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Column(
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Image.network(
+                              '$weatherIconUrl$_abbrevation.png',
+                              width: 100,
                             ),
                           ),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(
+                        ),
+                        Center(
+                          child: Text(
+                            '$_temperature °C',
+                            style: const TextStyle(
                               color: Colors.white,
-                              width: 2,
+                              fontSize: 60,
                             ),
                           ),
-                          hintStyle: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.white,
+                        ),
+                        Center(
+                          child: Text(
+                            _location ?? '',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 60,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  )
-                ],
+                    Column(
+                      children: [
+                        SizedBox(
+                          width: 300,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: TextField(
+                              onSubmitted: (input) async {
+                                await onTextFieldSubmitted(input);
+                              },
+                              keyboardType: TextInputType.text,
+                              textCapitalization: TextCapitalization.words,
+                              cursorColor: Colors.white,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                              ),
+                              decoration: const InputDecoration(
+                                hintText: 'Search another location',
+                                alignLabelWithHint: true,
+                                filled: false,
+                                focusedBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                hintStyle: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.search,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
