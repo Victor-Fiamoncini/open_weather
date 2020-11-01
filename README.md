@@ -1,6 +1,6 @@
-# Open Weather 🌦
+# Meta Weather 🌦
 
-Weather prediction dashboard, with location search. Built with Dart/Flutter.
+Weather prediction dashboard app, with location search. Built with Flutter.
 
 API used in project: https://www.metaweather.com
 
