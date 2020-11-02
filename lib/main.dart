@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,7 +13,11 @@ import 'package:open_weather/models/location.dart' as location_dto;
 import 'package:open_weather/models/weather.dart';
 import 'package:open_weather/widgets/forecast_item.dart';
 
-void main() => runApp(App());
+Future<void> main() async {
+  await DotEnv().load();
+
+  runApp(App());
+}
 
 class App extends StatefulWidget {
   @override
@@ -153,6 +158,10 @@ class _AppState extends State<App> {
           image: DecorationImage(
             image: AssetImage('lib/assets/images/backgrounds/$_weather.png'),
             fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.black.withOpacity(0.6),
+              BlendMode.dstATop,
+            ),
           ),
         ),
         child: _temperature == null
@@ -164,6 +173,7 @@ class _AppState extends State<App> {
               )
             : Scaffold(
                 backgroundColor: Colors.transparent,
+                resizeToAvoidBottomInset: true,
                 appBar: AppBar(
                   backgroundColor: Colors.transparent,
                   elevation: 0,
@@ -216,11 +226,19 @@ class _AppState extends State<App> {
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        ForecastItem(daysFromNow: 1),
-                        ForecastItem(daysFromNow: 2),
-                      ],
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (var i = 0; i < 6; i++)
+                            ForecastItem(
+                              daysFromNow: i + 1,
+                              abbrevation: _abbrevationForecast[i],
+                              minTemperature: _minTemperatureForecast[i],
+                              maxTemperature: _maxTemperatureForecast[i],
+                            ),
+                        ],
+                      ),
                     ),
                     Column(
                       children: [
