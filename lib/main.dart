@@ -5,10 +5,12 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import 'package:open_weather/config/api.dart';
 import 'package:open_weather/models/location.dart' as location_dto;
 import 'package:open_weather/models/weather.dart';
+import 'package:open_weather/widgets/forecast_item.dart';
 
 void main() => runApp(App());
 
@@ -21,17 +23,19 @@ class _AppState extends State<App> {
   String _location = 'San Fransisco';
   int _woeid = 2487956;
   String _weather = 'clear';
-  int _temperature;
+  int _temperature = 20;
   String _abbrevation = 'h';
   String _error = '';
   Position _currentPosition;
-  String _currentAddress;
+  final List<int> _minTemperatureForecast = List(7);
+  final List<int> _maxTemperatureForecast = List(7);
+  final List<String> _abbrevationForecast = List(7);
 
   @override
   void initState() {
     super.initState();
 
-    _fetchLocation();
+    _getCurrentGeoLocation();
   }
 
   Future<void> _fetchSearch(String input) async {
@@ -39,11 +43,11 @@ class _AppState extends State<App> {
       final response = await http.get(searchApiUrl + input);
       final jsonResponse = jsonDecode(response.body)[0];
 
-      final locationInstance = location_dto.Location.fromJson(jsonResponse);
+      final locationJson = location_dto.Location.fromJson(jsonResponse);
 
       setState(() {
-        _location = locationInstance.title;
-        _woeid = locationInstance.woeid;
+        _location = locationJson.title;
+        _woeid = locationJson.woeid;
         _error = '';
       });
     } catch (e) {
@@ -61,11 +65,11 @@ class _AppState extends State<App> {
       final jsonResponse = jsonDecode(response.body);
       final data = jsonResponse['consolidated_weather'][0];
 
-      final weatherInstance = Weather.fromJson(data);
+      final weatherJson = Weather.fromJson(data);
 
-      final formattedTemp = weatherInstance.theTemp.round();
+      final formattedTemp = weatherJson.theTemp.round();
 
-      final formattedWeather = weatherInstance.weatherStateName
+      final formattedWeather = weatherJson.weatherStateName
           .toString()
           .replaceAll(' ', '')
           .toLowerCase();
@@ -73,16 +77,40 @@ class _AppState extends State<App> {
       setState(() {
         _temperature = formattedTemp;
         _weather = formattedWeather;
-        _abbrevation = weatherInstance.weatherStateAbbr;
+        _abbrevation = weatherJson.weatherStateAbbr;
       });
     } catch (e) {
       print('Error to search weather');
     }
   }
 
+  Future<void> _fetchWeekWeathersFromToday() async {
+    final today = DateTime.now();
+
+    for (var i = 0; i < 6; i++) {
+      final formattedToday = today.add(Duration(days: i + 1)).toString();
+      final formattedDate = DateFormat('y/M/d', formattedToday);
+
+      final url = '$locationApiUrl$_woeid/$formattedDate';
+      final response = await http.get(url);
+      final jsonResponse = jsonDecode(response.body);
+
+      final weatherJson = Weather.fromJson(jsonResponse[0]);
+
+      setState(() {
+        _minTemperatureForecast[i] = weatherJson.minTemp.round();
+        _maxTemperatureForecast[i] = weatherJson.maxTemp.round();
+        _abbrevationForecast[i] = weatherJson.weatherStateAbbr;
+      });
+    }
+
+    print(_minTemperatureForecast);
+  }
+
   Future<void> _onTextFieldSubmitted(String input) async {
     await _fetchSearch(input);
     await _fetchLocation();
+    await _fetchWeekWeathersFromToday();
   }
 
   Future<void> _getCurrentGeoLocation() async {
@@ -99,8 +127,6 @@ class _AppState extends State<App> {
     }
   }
 
-  Future<void> _fetchLocationDay() async {}
-
   Future<void> _getAddressFromLatLng() async {
     try {
       final placemarks = await placemarkFromCoordinates(
@@ -108,14 +134,9 @@ class _AppState extends State<App> {
         _currentPosition.longitude,
       );
 
-      final place = placemarks[0];
+      final place = placemarks[0].locality;
 
-      setState(() {
-        _currentAddress =
-            '${place.locality}, ${place.postalCode}, ${place.country}';
-      });
-
-      await _fetchSearch(place.locality);
+      await _fetchSearch(place);
       await _fetchLocation();
     } catch (e) {
       print('Error to get address from lat/lng');
@@ -193,6 +214,12 @@ class _AppState extends State<App> {
                             ),
                           ),
                         ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        ForecastItem(daysFromNow: 1),
+                        ForecastItem(daysFromNow: 2),
                       ],
                     ),
                     Column(
