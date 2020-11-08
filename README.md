@@ -1,4 +1,4 @@
-# Meta Weather 🌦
+# Open Weather 🌦
 
 Weather prediction dashboard app, with location search. Built with Flutter.
 
